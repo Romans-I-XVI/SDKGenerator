@@ -65,14 +65,27 @@ function PlayFab() as object
 			}
 
 			if not post.IsAsync and post.SentSuccessfully
-				post.Result = PlayFab().Wait(transfer)
+				PlayFab().Wait(post)
 			end if
 
 			return post
 		end function
 
-		m.PlayFab.Wait = function(transfer as object)
-			return Wait(PlayFab().Settings.Timeout, transfer.GetMessagePort())
+		m.PlayFab.Wait = function(post as object)
+			message_port = post.Transfer.GetMessagePort()
+			timer = CreateObject("roTimeSpan")
+			timeout = PlayFab().Settings.Timeout
+			waiting = true
+			while waiting
+				message = message_port.GetMessage()
+				if message <> invalid
+					post.Result = message
+					waiting = false
+				end if
+				if timer.TotalMilliseconds() > timeout
+					waiting = false
+				end if
+			end while
 		end function
 	end if
 
