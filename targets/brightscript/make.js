@@ -38,7 +38,7 @@ function makeApi(api, sourceDir, apiOutputDir) {
     };
 
     var apiTemplate = getCompiledTemplate(path.resolve(sourceDir, "templates/API.brs.ejs"));
-    writeFile(path.resolve(apiOutputDir, "PlayFab" + api.name + "Api.brs"), apiTemplate(locals));
+    writeFile(path.resolve(apiOutputDir, "PlayFab" + api.name + "SDK.brs"), apiTemplate(locals));
 }
 
 function getAuthParams(apiCall) {
