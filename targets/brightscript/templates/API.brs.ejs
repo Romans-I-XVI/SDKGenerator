@@ -1,0 +1,17 @@
+function PlayFab<%- api.name %>SDK() as object
+    api = {}
+
+    <% for(var i in api.calls) { var apiCall = api.calls[i];
+        %><%- getDeprecationAttribute("", apiCall)
+        %>api.<%- apiCall.name %> = function(request, custom_data = invalid, extra_headers = invalid) as object
+<%- generateApiSummary("        ", apiCall, "summary", ["https://api.playfab.com/documentation/" + api.name.toLowerCase() + "/method/" + apiCall.name ])
+%><%- getRequestActions("        ", apiCall) 
+%>
+        post = PlayFab().Post("<%- apiCall.url %>", request, <%- getAuthParams(apiCall) %>, custom_data, extra_headers)<%- getResultActions("        ", apiCall, api) %>
+        return post
+    end function
+
+    <% }
+    %>return api
+
+end function
