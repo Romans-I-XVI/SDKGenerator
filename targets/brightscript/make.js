@@ -96,8 +96,11 @@ function getRequestActions(tabbing, apiCall) {
 function getResultActions(tabbing, apiCall) {
     if (apiCall.result === "LoginResult")
         return "\n\n"
-            + tabbing + "result = ParseJson(post.Result)\n"
-            + tabbing + "if result <> invalid\n"
+            + tabbing + "if post.IsAsync and post.SentSuccessfully\n"
+            + tabbing + "    PlayFab().Wait(post)\n"
+            + tabbing + "end if\n"
+            + tabbing + "if post.Result <> invalid\n"
+            + tabbing + "    result = ParseJson(post.Result)\n"
             + tabbing + "    if result.data.PlayFabID <> invalid\n"
             + tabbing + "        PlayFab()._internalSettings.PlayFabID = result.data.PlayFabID\n"
             + tabbing + "    end if\n"
