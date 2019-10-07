@@ -1,8 +1,9 @@
 var path = require("path");
 
 // Making resharper less noisy - These are defined in Generate.js
-if (typeof (getCompiledTemplate) === "undefined") getCompiledTemplate = function () { };
 if (typeof (templatizeTree) === "undefined") templatizeTree = function () { };
+if (typeof (generateApiSummaryLines) === "undefined") generateApiSummaryLines = function () { };
+if (typeof (getCompiledTemplate) === "undefined") getCompiledTemplate = function () { };
 
 exports.makeCombinedAPI = function (apis, sourceDir, apiOutputDir) {
     // Builds every api.  The provided "apis" variable is a list of objects, Examples: API_SPECS/Legacy/PlayFab/admin.api.json, API_SPECS/Legacy/PlayFab/server.api.json, and API_SPECS/Legacy/PlayFab/client.api.json
@@ -28,7 +29,6 @@ function makePlayFab(apis, sourceDir, apiOutputDir) {
 function makeApi(api, sourceDir, apiOutputDir) {
     var locals = {
         api: api,
-        sdkVersion: sdkGlobals.sdkVersion,
         sourceDir: sourceDir,
         getAuthParams: getAuthParams,
         getRequestActions: getRequestActions,
