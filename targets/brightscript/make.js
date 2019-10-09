@@ -85,11 +85,15 @@ function getRequestActions(tabbing, apiCall) {
     //     return tabbing + "var authKey = null; var authValue = null;\n"
     //         + tabbing + "if (!authKey && PlayFab._internalSettings.sessionTicket) { var authInfo = PlayFab._internalSettings.GetAuthInfo(request, authKey=\"X-Authorization\"); authKey = authInfo.authKey, authValue = authInfo.authValue; }\n"
     //         + tabbing + "if (!authKey && PlayFab.settings.developerSecretKey) { var authInfo = PlayFab._internalSettings.GetAuthInfo(request, authKey=\"X-SecretKey\"); authKey = authInfo.authKey, authValue = authInfo.authValue; }\n";
-    // if (apiCall.result === "LoginResult" || apiCall.request === "RegisterPlayFabUserRequest")
-    //     return tabbing + "request.TitleId = PlayFab.settings.titleId ? PlayFab.settings.titleId : request.TitleId; if (!request.TitleId) throw PlayFab._internalSettings.errorTitleId;\n"
-    //         + tabbing + "// PlayFab._internalSettings.authenticationContext can be modified by other asynchronous login attempts\n"
-    //         + tabbing + "// Deep-copy the authenticationContext here to safely update it\n"
-    //         + tabbing + "var authenticationContext = JSON.parse(JSON.stringify(PlayFab._internalSettings.authenticationContext));\n";
+    if (apiCall.result === "LoginResult" || apiCall.request === "RegisterPlayFabUserRequest")
+        return "\n"
+            + tabbing + "if PlayFab().Settings.TitleID <> invalid\n"
+            + tabbing + "    request.TitleID = PlayFab().Settings.TitleID\n"
+            + tabbing + "end if\n"
+            + tabbing + "if request.TitleID = invalid\n"
+            + tabbing + "    print PlayFab()._internalSettings.ErrorTitleID\n"
+            + tabbing + "    stop\n"
+            + tabbing + "end if\n"
     return "";
 }
 
