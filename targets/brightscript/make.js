@@ -81,10 +81,20 @@ function generateApiSummary(tabbing, apiElement, summaryParam, extraLines) {
 }
 
 function getRequestActions(tabbing, apiCall) {
-    // if (apiCall.url === "/Authentication/GetEntityToken")
-    //     return tabbing + "var authKey = null; var authValue = null;\n"
-    //         + tabbing + "if (!authKey && PlayFab._internalSettings.sessionTicket) { var authInfo = PlayFab._internalSettings.GetAuthInfo(request, authKey=\"X-Authorization\"); authKey = authInfo.authKey, authValue = authInfo.authValue; }\n"
-    //         + tabbing + "if (!authKey && PlayFab.settings.developerSecretKey) { var authInfo = PlayFab._internalSettings.GetAuthInfo(request, authKey=\"X-SecretKey\"); authKey = authInfo.authKey, authValue = authInfo.authValue; }\n";
+    if (apiCall.url === "/Authentication/GetEntityToken")
+        return  "\n"
+            + tabbing + "authKey = invalid\n"
+            + tabbing + "authValue = invalid\n"
+            + tabbing + "if PlayFab()._internalSettings.EntityToken <> invalid\n"
+            + tabbing + "    authKey = \"X-EntityToken\"\n"
+            + tabbing + "    authValue = PlayFab()._internalSettings.EntityToken\n"
+            + tabbing + "else if PlayFab()._internalSettings.SessionTicket <> invalid\n"
+            + tabbing + "    authKey = \"X-Authorization\"\n"
+            + tabbing + "    authValue = PlayFab()._internalSettings.SessionTicket \n"
+            + tabbing + "else if PlayFab().Settings.DeveloperSecretKey <> invalid\n"
+            + tabbing + "    authKey = \"X-SecretKey\"\n"
+            + tabbing + "    authValue = PlayFab().Settings.DeveloperSecretKey\n"
+            + tabbing + "end if\n"
     if (apiCall.result === "LoginResult" || apiCall.request === "RegisterPlayFabUserRequest")
         return "\n"
             + tabbing + "if PlayFab().Settings.TitleID <> invalid\n"
