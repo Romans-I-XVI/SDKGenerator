@@ -9,7 +9,6 @@ exports.makeCombinedAPI = function (apis, sourceDir, apiOutputDir) {
     // Builds every api.  The provided "apis" variable is a list of objects, Examples: API_SPECS/Legacy/PlayFab/admin.api.json, API_SPECS/Legacy/PlayFab/server.api.json, and API_SPECS/Legacy/PlayFab/client.api.json
     
     console.log("Generating Client api from: " + sourceDir + " to: " + apiOutputDir);
-    templatizeTree({}, path.resolve(sourceDir, "source"), apiOutputDir); // Copy the whole source directory as-is
     makePlayFab(apis, sourceDir,apiOutputDir)
     for (var i = 0; i < apis.length; i++) {
         makeApi(apis[i], sourceDir, apiOutputDir);
