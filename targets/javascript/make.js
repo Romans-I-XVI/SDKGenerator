@@ -85,9 +85,7 @@ function getRequestActions(tabbing, apiCall) {
 function hasResultActions(apiCall) {
     if (apiCall.result === "LoginResult" || apiCall.result === "RegisterPlayFabUserResult")
         return true;
-    if (apiCall.url === "/Authentication/GetEntityToken")
-        return true;
-    if (apiCall.url === "/Client/AttributeInstall")
+    if (apiCall.url === "/Authentication/GetEntityToken" || apiCall.url === "/GameServerIdentity/AuthenticateGameServerWithCustomId")
         return true;
     return false;
 }
@@ -103,19 +101,17 @@ function getResultActions(tabbing, apiCall) {
             + tabbing + "    }\n"
             + tabbing + "    // Apply the updates for the AuthenticationContext returned to the client\n"
             + tabbing + "    authenticationContext = PlayFab._internalSettings.UpdateAuthenticationContext(authenticationContext, result);\n"
-            + tabbing + "    PlayFab.ClientApi._MultiStepClientLogin(result.data.SettingsForUser.NeedsAttribution);\n"
             + tabbing + "}";
     if (apiCall.result === "RegisterPlayFabUserResult")
         return tabbing + "if (result != null && result.data.SessionTicket != null) {\n"
             + tabbing + "    PlayFab._internalSettings.sessionTicket = result.data.SessionTicket;\n"
-            + tabbing + "    PlayFab.ClientApi._MultiStepClientLogin(result.data.SettingsForUser.NeedsAttribution);\n"
             + tabbing + "}";
     if (apiCall.url === "/Authentication/GetEntityToken")
         return tabbing + "if (result != null && result.data.EntityToken != null)\n"
             + tabbing + "    PlayFab._internalSettings.entityToken = result.data.EntityToken;";
-    if (apiCall.url === "/Client/AttributeInstall")
-        return tabbing + "// Modify advertisingIdType:  Prevents us from sending the id multiple times, and allows automated tests to determine id was sent successfully\n"
-            + tabbing + "PlayFab.settings.advertisingIdType += \"_Successful\";\n";
+    if (apiCall.url === "/GameServerIdentity/AuthenticateGameServerWithCustomId")
+        return tabbing + "if (result != null && result.data.EntityToken != null && result.data.EntityToken.EntityToken != null)\n"
+            + tabbing + "    PlayFab._internalSettings.entityToken = result.data.EntityToken.EntityToken;";
     return "";
 }
 
@@ -205,12 +201,12 @@ function getPropertyTsType(property, datatype) {
         output = "string";
     else if (property.actualtype === "Boolean")
         output = "boolean";
+    else if (property.isclass)
+        output = property.actualtype;
     else if (property.actualtype.contains("int") || property.actualtype === "float" || property.actualtype === "double")
         output = "number";
     else if (property.actualtype === "DateTime")
         output = "string";
-    else if (property.isclass)
-        output = property.actualtype;
     else if (property.isenum)
         output = "string";
     else if (property.actualtype === "object")

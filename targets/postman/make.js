@@ -1,3 +1,4 @@
+//const { writeFile } = require("node:fs");
 var path = require("path");
 
 // Making resharper less noisy - These are defined in Generate.js
@@ -21,22 +22,33 @@ exports.makeCombinedAPI = function (apis, sourceDir, apiOutputDir) {
     var locals = {
         sdkVersion: sdkGlobals.sdkVersion,
         apis: apis,
+        getController: getController,
         getPostmanDescription: getPostmanDescription,
         getPostmanHeader: getPostmanHeader,
+        getPostmanHeaderV2: getPostmanHeaderV2,
         getRequestExample: getRequestExample,
         getUrl: getUrl,
         getVerticalTag: getVerticalTag
     };
 
     var outputFile = path.resolve(apiOutputDir, "playfab.json");
+    var outputFile2 = path.resolve(apiOutputDir, "playfabV2.json");
     var templateDir = path.resolve(sourceDir, "templates");
     var apiTemplate = getCompiledTemplate(path.resolve(templateDir, "playfab.json.ejs"));
     writeFile(outputFile, apiTemplate(locals));
+    var apiTemplate2 = getCompiledTemplate(path.resolve(templateDir, "playfabV2.json.ejs"));
+    writeFile(outputFile2, apiTemplate2(locals));
 
     try {
         require(outputFile); // Read the destination file and make sure it is correctly formatted json
     } catch (ex) {
         throw "The Postman Collection output was not properly formatted JSON:\n" + outputFile;
+    }
+
+    try {
+        require(outputFile2); // Read the destination file and make sure it is correctly formatted json
+    } catch (ex) {
+        throw "The Postman Collection output was not properly formatted JSON:\n" + outputFile2;
     }
 }
 
@@ -59,6 +71,10 @@ function getUrl(apiCall) {
     return "https://{{TitleId}}.playfabapi.com" + apiCall.url + "?sdk=PostmanCollection-" + sdkGlobals.sdkVersion;
 }
 
+function getController(apiCall) {
+    return apiCall.url.split("/")[1].toLowerCase();
+}
+
 function getPostmanHeader(apiCall) {
     if (apiCall.url === "/Authentication/GetEntityToken")
         return "X-PlayFabSDK: PostmanCollection-" + sdkGlobals.sdkVersion + "\\nContent-Type: application/json\\nX-Authorization: {{SessionTicket}}\\nX-SecretKey: {{SecretKey}}\\n";
@@ -70,6 +86,86 @@ function getPostmanHeader(apiCall) {
         return "X-PlayFabSDK: PostmanCollection-" + sdkGlobals.sdkVersion + "\\nContent-Type: application/json\\nX-EntityToken: {{EntityToken}}\\n";
     else if (apiCall.auth === "None")
         return "X-PlayFabSDK: PostmanCollection-" + sdkGlobals.sdkVersion + "\\nContent-Type: application/json\\n";
+
+    return "";
+}
+
+function getPostmanHeaderV2(apiCall) {
+    if (apiCall.url === "/Authentication/GetEntityToken")
+        return JSON.stringify([
+            {
+                "key": "X-PlayFabSDK",
+                "value": "PostmanCollection-" + sdkGlobals.sdkVersion
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            },
+            {
+                "key": "X-Authorization",
+                "value": "{{SessionTicket}}"
+            },
+            {
+                "key": "X-SecretKey",
+                "value": "{{SecretKey}}"
+            }
+        ])
+    if (apiCall.auth === "SessionTicket")
+        return JSON.stringify([
+            {
+                "key": "X-PlayFabSDK",
+                "value": "PostmanCollection-" + sdkGlobals.sdkVersion
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            },
+            {
+                "key": "X-Authorization",
+                "value": "{{SessionTicket}}"
+            }
+        ])
+    else if (apiCall.auth === "SecretKey")
+        return JSON.stringify([
+            {
+                "key": "X-PlayFabSDK",
+                "value": "PostmanCollection-" + sdkGlobals.sdkVersion
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            },
+            {
+                "key": "X-SecretKey",
+                "value": "{{SecretKey}}"
+            }
+        ])
+    else if (apiCall.auth === "EntityToken")
+        return JSON.stringify([
+            {
+                "key": "X-PlayFabSDK",
+                "value": "PostmanCollection-" + sdkGlobals.sdkVersion
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            },
+            {
+                "key": "X-EntityToken",
+                "value": "{{EntityToken}}"
+            }
+        ])
+    else if (apiCall.auth === "None")
+        return JSON.stringify([
+            {
+                "key": "X-PlayFabSDK",
+                "value": "PostmanCollection-" + sdkGlobals.sdkVersion
+            },
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            }
+        ])
 
     return "";
 }
@@ -97,14 +193,14 @@ function getPostmanDescription(api, apiCall) {
 
     output += jsonEscape(apiCall.summary); // Make sure quote characters are properly escaped
     if (!isProposed)
-        output += "\\n\\nApi Documentation: https://api.playfab.com/Documentation/" + api.name + "/method/" + apiCall.name;
+        output += "\\n\\nApi Documentation: https://docs.microsoft.com/rest/api/playfab/" + api.name.toLowerCase() + "/" + apiCall.subgroup.toLowerCase().replaceAll(" ", "-") + "/" + apiCall.name.toLowerCase();
 
     output += "\\n\\n**The following case-sensitive environment variables are required for this call:**";
     output += "\\n\\n\\\"TitleId\\\" - The Title Id of your game, available in the Game Manager (https://developer.playfab.com)";
     if (apiCall.auth === "SessionTicket")
         output += "\\n\\n\\\"SessionTicket\\\" - The string returned as \\\"SessionTicket\\\" in response to any Login method.";
     if (apiCall.auth === "SecretKey")
-        output += "\\n\\n\\\"SecretKey\\\" - The PlayFab API Secret Key, available in Game Manager for your title (https://developer.playfab.com/en-us/{{titleId}}/settings/credentials)";
+        output += "\\n\\n\\\"SecretKey\\\" - The PlayFab API Secret Key, available in Game Manager for your title (https://developer.playfab.com/{{titleId}}/settings/credentials)";
     if (apiCall.auth === "EntityToken")
         output += "\\n\\n\\\"EntityToken\\\" - The string returned as \\\"EntityToken.EntityToken\\\" in response to any Login method.";
 

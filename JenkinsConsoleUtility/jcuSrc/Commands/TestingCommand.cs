@@ -2,21 +2,22 @@ using PlayFab.UUnit;
 using System;
 using System.Collections.Generic;
 using JenkinsConsoleUtility.Util;
+using JenkinsConsoleUtility.Testing;
 
 namespace JenkinsConsoleUtility.Commands
 {
     public class TestingCommand : ICommand
     {
         private static readonly string[] MyCommandKeys = { "Test", "RunTests" };
-        public string[] CommandKeys => MyCommandKeys;
+        public string[] CommandKeys { get { return MyCommandKeys; } }
         private static readonly string[] MyMandatoryArgKeys = { };
-        public string[] MandatoryArgKeys => MyMandatoryArgKeys;
+        public string[] MandatoryArgKeys { get { return MyMandatoryArgKeys; } }
 
         public int Execute(Dictionary<string, string> argsLc, Dictionary<string, string> argsCased)
         {
             var testTitleData = TestTitleDataLoader.Load(null);
             UUnitIncrementalTestRunner.Start(false, null, testTitleData, null);
-            // TODO: UUnitIncrementalTestRunner.AddAssembly();
+            UUnitIncrementalTestRunner.AddTestAssembly(typeof(CloudScriptTests).Assembly);
 
             while (!UUnitIncrementalTestRunner.SuiteFinished)
                 UUnitIncrementalTestRunner.Tick();

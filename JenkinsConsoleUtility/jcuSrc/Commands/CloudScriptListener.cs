@@ -1,6 +1,5 @@
 using PlayFab;
 using PlayFab.ClientModels;
-using PlayFab.Json;
 using PlayFab.UUnit;
 using System;
 using System.Collections.Generic;
@@ -30,9 +29,9 @@ namespace JenkinsConsoleUtility.Commands
         private const int TestDataExistsSleepTime = 4500;
 
         private static readonly string[] MyCommandKeys = { "ListenCS" };
-        public string[] CommandKeys => MyCommandKeys;
+        public string[] CommandKeys { get { return MyCommandKeys; } }
         private static readonly string[] MyMandatoryArgKeys = { "buildidentifier" };
-        public string[] MandatoryArgKeys => MyMandatoryArgKeys;
+        public string[] MandatoryArgKeys { get { return MyMandatoryArgKeys; } }
 
         public const string CsFuncTestDataExists = "TestDataExists";
         public const string CsFuncGetTestData = "GetTestData";
@@ -40,8 +39,14 @@ namespace JenkinsConsoleUtility.Commands
 
         private CsGetRequest _getRequest;
         private bool verbose;
+        private readonly ISerializerPlugin json;
 
         private PlayFabClientInstanceAPI clientApi = new PlayFabClientInstanceAPI();
+
+        public CloudScriptListener()
+        {
+            json = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
+        }
 
         public int Execute(Dictionary<string, string> argsLc, Dictionary<string, string> argsCased)
         {
@@ -60,7 +65,7 @@ namespace JenkinsConsoleUtility.Commands
             if (returnCode != 0)
                 return returnCode;
             JcuUtil.FancyWriteToConsole(ConsoleColor.Gray, "Test data found");
-            returnCode = FetchTestResult(buildIdentifier, workspacePath, testTitleData);
+            returnCode = FetchTestResult(workspacePath, testTitleData);
             if (returnCode != 0)
                 return returnCode;
             JcuUtil.FancyWriteToConsole(ConsoleColor.Green, "Test data received");
@@ -77,11 +82,14 @@ namespace JenkinsConsoleUtility.Commands
             if (returnCode != 0)
             {
                 JcuUtil.FancyWriteToConsole(ConsoleColor.Red, "Failed to log in using CustomID: " + titleId + ", " + buildIdentifier);
-                JcuUtil.FancyWriteToConsole(ConsoleColor.Red, task.Result.Error?.GenerateErrorReport());
+                if (task.Result.Error != null)
+                {
+                    JcuUtil.FancyWriteToConsole(ConsoleColor.Red, task.Result.Error.GenerateErrorReport());
+                }
             }
             else
             {
-                JcuUtil.FancyWriteToConsole(ConsoleColor.Gray, "Login successful, PlayFabId: " + task.Result.Result.PlayFabId);
+                JcuUtil.FancyWriteToConsole(ConsoleColor.Gray, "Login successful, TitleId:", titleId, ", PlayFabId: " + task.Result.Result.PlayFabId);
             }
             return returnCode;
         }
@@ -113,18 +121,22 @@ namespace JenkinsConsoleUtility.Commands
         /// Fetch the result and return
         /// (The cloudscript function should remove the test result from userData and delete the user)
         /// </summary>
-        private int FetchTestResult(string buildIdentifier, string workspacePath, TestTitleData testTitleData)
+        private int FetchTestResult(string workspacePath, TestTitleData testTitleData)
         {
             List<TestSuiteReport> testResults;
             string errorReport;
             var callResult = ExecuteCloudScript(CsFuncGetTestData, _getRequest, testTitleData.extraHeaders, out testResults, out errorReport);
 
-            var tempFilename = buildIdentifier + ".xml";
-            var tempFileFullPath = Path.Combine(workspacePath, tempFilename);
+            string outputFileFullPath = null;
+
+            string outputFileName = "ListenCsResult.xml";
+            
+            outputFileFullPath = Path.Combine(workspacePath, outputFileName);
 
             if (!callResult || testResults == null)
                 return 1;
-            return JUnitXml.WriteXmlFile(tempFileFullPath, testResults, true);
+            JcuUtil.FancyWriteToConsole(ConsoleColor.Gray, "Writing test results: " + outputFileFullPath);
+            return JUnitXml.WriteXmlFile(outputFileFullPath, testResults, true);
         }
 
         public bool ExecuteCloudScript<TIn, TOut>(string functionName, TIn functionParameter, Dictionary<string, string> extraHeaders, out TOut result, out string errorReport)
@@ -142,31 +154,31 @@ namespace JenkinsConsoleUtility.Commands
 
             if (task.Result.Error != null)
             {
-                Console.WriteLine("Execute Cloudscript failure: " + functionName + ":\n" + JsonWrapper.SerializeObject(functionParameter));
+                Console.WriteLine("Execute Cloudscript failure: " + functionName + ":\n" + json.SerializeObject(functionParameter));
                 Console.WriteLine(errorReport);
                 result = default(TOut);
                 return false;
             }
 
             // Re-serialize as the target type
-            var json = JsonWrapper.SerializeObject(task.Result.Result.FunctionResult);
+            var resultJson = json.SerializeObject(task.Result.Result.FunctionResult);
             if (verbose)
             {
                 Console.WriteLine("===== Verbose ExecuteCloudScript Json: =====");
-                Console.WriteLine(json);
+                Console.WriteLine(resultJson);
                 Console.WriteLine("===== End =====");
             }
             try
             {
-                result = JsonWrapper.DeserializeObject<TOut>(json);
+                result = json.DeserializeObject<TOut>(resultJson);
             }
             catch (Exception)
             {
-                Console.WriteLine("Could not serialize text: \"" + json + "\" as " + typeof(TOut).Name);
+                Console.WriteLine("Could not serialize text: \"" + resultJson + "\" as " + typeof(TOut).Name);
                 result = default(TOut);
                 return false;
             }
-            return task.Result.Error == null && task.Result.Result.Error == null && (result != null || json == "null");
+            return task.Result.Error == null && task.Result.Result.Error == null && (result != null || resultJson == "null");
         }
     }
 }

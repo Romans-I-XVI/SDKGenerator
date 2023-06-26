@@ -51,8 +51,14 @@ Override the target source parameter name passed to the generation script.
 .PARAMETER KeepSource
 Indicites whether or not to remove all generated source files from the destination location.
 
-.PARAMETER Beta
-Indicates whether or not to include any APIs tagged with as beta.
+.PARAMETER BuildFlags
+Any additional flags you want to pass to the build.
+
+.PARAMETER Version
+Overrides the default version of the generated SDK.  Note that this will apply to ALL SDKs being
+generated.  You will need to call this function multiple times if you want to use a different
+version for each SDK type.  You can see the current SDK versions by looking at SdkManualNotes.json
+which is downloaded by the API generator.
 
 .EXAMPLE
 Update-PlayFabSdk -SdkName CSharpSDK
@@ -93,18 +99,27 @@ param(
                 "ActionScriptSDK",
                 "Cocos2d-xSDK",
                 "CSharpSDK",
+                "CSharpBetaSdk",
                 "JavaSDK",
+                "JavaBetaSDK",
                 "JavaScriptSDK",
+                "JavaScriptBetaSDK",
                 "LuaSDK",
                 "NodeSDK",
+                "NodeBetaSDK",
                 "Objective_C_SDK",
                 "PhpSDK",
                 "PostmanCollection",
+                "PostmanBeta",
                 "PythonSDK",
+                "PythonBetaSdk",
                 "SdkTestingCloudScript",
                 "UnrealMarketplacePlugin",
                 "UnitySDK",
+                "UnityBeta",
                 "WindowsSDK",
+                "XPlatCppSdk",
+                "XPlatBetaSdk",
                 "XPlatCoreTemplate"
              ) -like "$WordToComplete*"
         }
@@ -124,13 +139,15 @@ param(
     [AllowEmptyString()]
     [string]$ApiSpecGitUrl,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
-    [string]$OutputPath = "..\..\sdks",
+    [string]$OutputPath,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
     [string]$TargetSource,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
     [switch]$KeepSource,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
-    [switch]$Beta
+    [string[]]$BuildFlags,
+    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [string]$Version
 )
 
 begin
@@ -140,35 +157,22 @@ begin
         throw "You must have Node.js installed to generate the SDK"
     }
 
-    $sdkTargetSrcMap = @{
-        "ActionScriptSDK" = "actionscript";
-        "Cocos2d-xSDK" = "cpp-cocos2dx";
-        "CSharpSDK" = "csharp";
-        "JavaSDK" = "java";
-        "JavaScriptSDK" = "javascript";
-        "LuaSDK" = "LuaSdk";
-        "NodeSDK" = "js-node";
-        "Objective_C_SDK" = "objc";
-        "PhpSDK" = "PhpSdk";
-        "PostmanCollection" = "postman";
-        "PythonSDK" = "PythonSdk";
-        "SdkTestingCloudScript" = "SdkTestingCloudScript";
-        "UnrealMarketplacePlugin" = "UnrealMarketplacePlugin";
-        "UnitySDK" = "unity-v2";
-        "WindowsSDK" = "windowssdk";
-        "XPlatCoreTemplate" = "xplatcoretemplate";
+    if(!$OutputPath)
+    {
+        $OutputPath = "../../sdks"
     }
 
-    $sdksPath = $OutputPath
-    if(![System.IO.Path]::IsPathRooted($sdksPath))
+    if(![System.IO.Path]::IsPathRooted($OutputPath))
     {
-        $sdksPath = Resolve-Path (Join-Path $PSScriptRoot $OutputPath)
+        $OutputPath = Join-Path $PSScriptRoot $OutputPath
     }
 
-    if(!(Test-Path $sdksPath))
+    if(!(Test-Path $OutputPath))
     {
-        mkdir $sdksPath | Out-Null
+        mkdir $OutputPath | Out-Null
     }
+
+    $OutputPath = Resolve-Path $OutputPath
 
     if($PSCmdlet.ParameterSetName -eq "ApiSpecPath")
     {
@@ -232,18 +236,7 @@ process
 {
     foreach($targetSdkName in $SdkName)
     {
-        $sdkTargetSource = $TargetSource
-        if(!$sdkTargetSource)
-        {
-            $sdkTargetSource = $sdkTargetSrcMap[$targetSdkName]
-            Write-Verbose "Setting Targetsource to $sdkTargetSource for $targetSdkName"
-            if(!$sdkTargetSource)
-            {
-                throw "Unable to determine TargetSource for '$targetSdkName'.  You must explicitly provide a value."
-            }
-        }
-
-        $destPath = Join-Path $sdksPath $targetSdkName
+        $destPath = Join-Path $OutputPath $targetSdkName
 
         if(!(Test-Path $destPath))
         {
@@ -270,24 +263,38 @@ process
             $buildIdentifier = "-buildIdentifier JBuild_$($targetSdkName)_($env:NODE_NAME)_$($env:EXECUTOR_NUMBER)"
         }
 
-        $sdkGenArgValues = @()
-        if($Beta)
+        if(!$BuildFlags)
         {
-            $sdkGenArgValues += "beta"
+            $BuildFlags = @()
         }
 
         if($targetSdkName -eq "UnrealMarketplacePlugin")
         {
-            $sdkGenArgValues += "nonnullable"
+            $BuildFlags += "nonnullable"
         }
 
-        $sdkGenArgs = "";
-        if($sdkGenArgValues)
+        $buildFlagsParameter = "";
+        if($BuildFlags)
         {
-            $sdkGenArgs = "-flags $($sdkGenArgValues -join " ")"
+            $buildFlagsParameter = "-flags $($BuildFlags -join " ")"
         }
 
-        $expression = "node generate.js `"$sdkTargetSource=$destPath`" $apiSpecSource $sdkGenArgs $buildIdentifier".Trim()
+        $versionParameter = ""
+        if($Version)
+        {
+            $versionParts = $Version -split ('\.')
+            if($versionParts.Length -eq 2)
+            {
+                $Version += "." + (Get-Date -Format "yyMMdd")
+            }
+            elseif($versionParts.Length -ne 3)
+            {
+                throw "You must provide a two or three part version in the form <major>.<minor>[.<yymmdd>]"
+            }
+            $versionParameter = "-version $Version"
+        }
+
+        $expression = "node generate.js -destPath `"$destPath`" -nowait $apiSpecSource $buildFlagsParameter $versionParameter $buildIdentifier".Trim()
         if($PSCmdlet.ShouldProcess(
             "Executing '$expression'.",
             "Would you like to generate $targetSdkName into '$destPath'?",

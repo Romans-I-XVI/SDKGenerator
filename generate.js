@@ -1,10 +1,22 @@
-var ejs = require("ejs");
+/// <reference path="node.d.ts"/>
+/// <reference path="generate-plugins.ts"/>
+/// <reference path="generate-sdk.ts"/>
+var ejs;
+try
+{
+    ejs = require("ejs");
+}
+catch(e)
+{
+    console.log("ejs not found, try running the install script under SDKBuildScripts/initejs.sh and re-generate");
+    process.exit();
+}
 var fs = require("fs");
 var https = require("https");
 var path = require("path");
-ejs.delimiter = "\n";
 var defaultApiSpecFilePath = "../API_Specs"; // Relative path to Generate.js
 var defaultApiSpecGitHubUrl = "https://raw.githubusercontent.com/PlayFab/API_Specs/master";
+var defaultAzureApiSpecGitHubUrl = "https://api.github.com/repos/PlayFab/azure-api-specs/contents/";
 var defaultApiSpecPlayFabUrl = "https://www.playfabapi.com/apispec";
 var tocFilename = "TOC.json";
 var tocCacheKey = "TOC";
@@ -25,8 +37,7 @@ var sdkGeneratorGlobals = {
     apiTemplateDescription: "INVALID",
     apiCache: {},
     sdkDocsByMethodName: {},
-    specialization: defaultSpecialization,
-    unitySubfolder: null
+    specialization: defaultSpecialization
 };
 global.sdkGeneratorGlobals = sdkGeneratorGlobals;
 var specializationContent;
@@ -101,8 +112,6 @@ function parseCommandInputs(args, argsByName, errorMessages, buildTarget) {
         argsByName.apispecgiturl = defaultApiSpecGitHubUrl;
     if (argsByName.apispecpfurl === "")
         argsByName.apispecpfurl = defaultApiSpecPlayFabUrl;
-    if (argsByName.unityDestinationSubfolder)
-        sdkGeneratorGlobals.unitySubfolder = argsByName.unityDestinationSubfolder;
     // Output an error if no templates are defined
     if (!buildTarget.destPath)
         errorMessages.push("Build target's destPath not defined.");
@@ -185,6 +194,7 @@ function tryApplyTarget(sdktemplateFolder, destPath, buildTarget, errorMessages)
 function getMakeScriptForTemplate(buildTarget) {
     var templateSubDirs = ["privateTemplates", "targets"];
     for (var subIdx in templateSubDirs) {
+        console.log("Checking: " + __dirname + "/" + templateSubDirs[subIdx] + "/" + buildTarget.templateFolder + "/" + "make.js");
         var targetMain = path.resolve(__dirname, templateSubDirs[subIdx], buildTarget.templateFolder, "make.js");
         if (!fs.existsSync(targetMain))
             continue;
@@ -327,12 +337,13 @@ function loadApisFromPlayFabServer(argsByName, apiCache, apiSpecPfUrl, onComplet
             catchAndReport(onComplete);
         }
     }
+    var specUrl = apiSpecPfUrl.contains("azure") ? defaultAzureApiSpecGitHubUrl : defaultApiSpecGitHubUrl;
     function onTocComplete() {
         // Load specialization TOC
         var specializationTocRef = getSpecializationTocRef(apiCache);
         if (specializationTocRef) {
             finishCountdown += 1;
-            downloadFromUrl(defaultApiSpecGitHubUrl, specializationTocRef.path, apiCache, specializationTocCacheKey, onEachComplete, false);
+            downloadFromUrl(specUrl, specializationTocRef.path, apiCache, specializationTocCacheKey, onEachComplete, false);
         }
         // Load TOC docs
         var docList = apiCache[tocCacheKey].documents;
@@ -342,20 +353,30 @@ function loadApisFromPlayFabServer(argsByName, apiCache, apiSpecPfUrl, onComplet
                 if (!docList[dIdx].relPath.contains("SdkManualNotes"))
                     downloadFromUrl(apiSpecPfUrl, docList[dIdx].docKey, apiCache, docList[dIdx].docKey, onEachComplete, docList[dIdx].isOptional);
                 else
-                    downloadFromUrl(defaultApiSpecGitHubUrl, docList[dIdx].relPath, apiCache, docList[dIdx].docKey, onEachComplete, docList[dIdx].isOptional);
+                    downloadFromUrl(specUrl, docList[dIdx].relPath, apiCache, docList[dIdx].docKey, onEachComplete, docList[dIdx].isOptional);
                 mapSpecMethods(docList[dIdx]);
             }
         }
     }
     // Load TOC
-    downloadFromUrl(defaultApiSpecGitHubUrl, tocFilename, apiCache, tocCacheKey, onTocComplete, false);
+    downloadFromUrl(specUrl, tocFilename, apiCache, tocCacheKey, onTocComplete, false);
 }
 function downloadFromUrl(srcUrl, appendUrl, apiCache, cacheKey, onEachComplete, optional) {
     srcUrl = srcUrl.endsWith("/") ? srcUrl : srcUrl + "/";
     var fullUrl = srcUrl + appendUrl;
     console.log("Begin reading URL: " + fullUrl);
     var rawResponse = "";
-    https.get(fullUrl, function (request) {
+    var options = {};
+    if (srcUrl.contains(defaultAzureApiSpecGitHubUrl)) {
+        options =
+            { "headers": {
+                "User-Agent": process.env.USERAGENT,
+                "Authorization": "token " + process.env.AUTHTOKEN,
+                "Accept": "application/vnd.github.raw"
+                }
+            }
+    }
+    https.get(fullUrl, options, function (request) {
         request.setEncoding("utf8");
         request.on("data", function (chunk) { rawResponse += chunk; });
         request.on("end", function () {
@@ -387,8 +408,10 @@ function generateApis(buildIdentifier, target) {
     var genConfigPath = path.resolve(target.destPath, "genConfig.json");
     try {
         var genConfigFile = require(genConfigPath);
-        genConfig = genConfigFile["default"];
-        console.log("Loaded genConfig at: " + genConfigPath);
+        var genConfigProfileName = sdkGeneratorGlobals.argsByName.hasOwnProperty("genconfigprofilename") ? sdkGeneratorGlobals.argsByName["genconfigprofilename"] : "default";
+        genConfig = genConfigFile[genConfigProfileName];
+        console.log("Loaded genConfig at: " + genConfigPath + " with profile: " + genConfigProfileName);
+        console.log("Config is: " + JSON.stringify(genConfigFile));
     }
     catch (_) {
         console.log("Did not find: " + genConfigPath);
@@ -404,7 +427,7 @@ function generateApis(buildIdentifier, target) {
             target.versionString = genConfig.versionString;
     }
     getMakeScriptForTemplate(target);
-    console.log("Making SDK from: " + target.templateFolder + "\n - to: " + target.destPath);
+    console.log("Making SDK from:\n  - " + target.templateFolder + "\nto:\n  - " + target.destPath);
     // It would probably be better to pass these into the functions, but I don't want to change all the make___Api parameters for all projects today.
     //   For now, just change the global variables in each with the data loaded from SdkManualNotes.json
     if (target.versionKey && !target.versionString) {
@@ -414,6 +437,7 @@ function generateApis(buildIdentifier, target) {
     console.log("BuildTarget: " + JSON.stringify(target));
     sdkGlobals.sdkVersion = target.versionString;
     sdkGlobals.buildIdentifier = buildIdentifier;
+    sdkGlobals.buildFlags = target.buildFlags;
     if (sdkGlobals.sdkVersion === null) {
         // The point of this error is to force you to add a line to sdkManualNotes.json, to describe the version and date when this sdk/collection is built
         throw Error("SdkManualNotes does not contain sdkVersion for " + target.templateFolder);
@@ -438,7 +462,7 @@ function generateApis(buildIdentifier, target) {
 }
 function getApiDefinition(cacheKey, buildFlags) {
     var api = getApiJson(cacheKey);
-    if (!api)
+    if (!api || !api.calls)
         return null;
     // Special case, "obsolete" is treated as an SdkGenerator flag, but is not an actual flag in pf-main
     var obsoleteFlaged = false, nonNullableFlagged = false;
@@ -509,7 +533,7 @@ function GetFlagConflicts(buildFlags, apiObj, obsoleteFlaged, nonNullableFlagged
         for (var alIdx = 0; alIdx < allInclusiveFlags.length; alIdx++)
             if (buildFlags.indexOf(allInclusiveFlags[alIdx]) === -1)
                 return apiObj.AllInclusiveFlags; // If a required flag is missing, fail out
-    // Any Inclusive flags must match at least one if present (Api calls and datatypes)
+    // Any Inclusive flags must match at least one if present (Api calls, datatypes, and properties)
     var anyInclusiveFlags = [];
     if (apiObj.hasOwnProperty("AnyInclusiveFlags"))
         anyInclusiveFlags = lowercaseFlagsList(apiObj.AnyInclusiveFlags);
@@ -536,8 +560,7 @@ function mkdirParentsSync(dirname) {
 }
 // String utilities
 String.prototype.replaceAll = function (search, replacement) {
-    var target = this;
-    return target.replace(new RegExp(search, "g"), replacement);
+    return this.replace(new RegExp(search, "g"), replacement);
 };
 String.prototype.endsWith = function (suffix) {
     return this.indexOf(suffix, this.length - suffix.length) !== -1;
@@ -573,7 +596,7 @@ String.prototype.wordWrap = function (width, brk, cut) {
 };
 // Official padStart implementation
 // https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
+// https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
 if (!String.prototype.padStart) {
     String.prototype.padStart = function padStart(targetLength, padString) {
         targetLength = targetLength >> 0; //truncate if number or convert non-number to 0;
@@ -591,7 +614,7 @@ if (!String.prototype.padStart) {
     };
 }
 // SDK generation utilities
-function templatizeTree(locals, sourcePath, destPath) {
+function templatizeTree(locals, sourcePath, destPath, excludeFolders, excludeFiles) {
     if (!fs.existsSync(sourcePath))
         throw Error("Copy tree source doesn't exist: " + sourcePath);
     if (!fs.lstatSync(sourcePath).isDirectory())
@@ -601,15 +624,50 @@ function templatizeTree(locals, sourcePath, destPath) {
         mkdirParentsSync(destPath);
     else if (!fs.lstatSync(destPath).isDirectory())
         throw Error("Can't copy a directory onto a file: " + sourcePath + " " + destPath);
-    var filesInDir = fs.readdirSync(sourcePath);
-    for (var i = 0; i < filesInDir.length; i++) {
-        var filename = filesInDir[i];
-        var file = sourcePath + "/" + filename;
-        if (fs.lstatSync(file).isDirectory())
-            templatizeTree(locals, file, destPath + "/" + filename);
-        else
-            copyOrTemplatizeFile(locals, file, destPath + "/" + filename);
-    }
+        var filesInDir = fs.readdirSync(sourcePath);
+        for (var i = 0; i < filesInDir.length; i++) {
+            var filename = filesInDir[i];
+            var file = sourcePath + "/" + filename;
+    
+            
+    
+            
+    
+            if (fs.lstatSync(file).isDirectory()) {
+                var folderExcluded = false;
+                if(excludeFolders != null)
+                {
+                    for(var excludedFolderIndex = 0; excludedFolderIndex < excludeFolders.length; excludedFolderIndex++)
+                    {
+                        if(excludeFolders[excludedFolderIndex] == filename)
+                        {
+                            folderExcluded = true;
+                            break;
+                        }
+                    }
+                }
+                if (folderExcluded)
+                    continue;
+                templatizeTree(locals, file, destPath + "/" + filename, excludeFolders, excludeFiles);
+            }
+            else {
+                var fileExcluded = false;
+                if(excludeFiles != null )
+                {
+                    for(var excludedFileIndex = 0; excludedFileIndex < excludeFiles.length; excludedFileIndex++)
+                    {
+                        if(excludeFiles[excludedFileIndex] == filename)
+                        {
+                            fileExcluded = true;
+                            break;
+                        }
+                    }
+                }
+                if (fileExcluded)
+                    continue;
+                copyOrTemplatizeFile(locals, file, destPath + "/" + filename);
+            }
+        }
 }
 global.templatizeTree = templatizeTree;
 function copyOrTemplatizeFile(locals, sourceFile, destFile) {
@@ -695,11 +753,14 @@ global.writeFile = writeFile;
  * Wrapper function for boilerplate of compiling templates
  * Also Caches the Templates to avoid reloading and recompiling
  * */
-function getCompiledTemplate(templatePath) {
+function getCompiledTemplate(templatePath, includes = false) {
     if (!this.compiledTemplates)
         this.compiledTemplates = {};
     if (!this.compiledTemplates.hasOwnProperty(templatePath))
-        this.compiledTemplates[templatePath] = ejs.compile(readFile(templatePath));
+        if (includes)
+            this.compiledTemplates[templatePath] = ejs.compile(readFile(templatePath), { filename: templatePath });
+        else
+            this.compiledTemplates[templatePath] = ejs.compile(readFile(templatePath), { filename: templatePath });
     return this.compiledTemplates[templatePath];
 }
 global.getCompiledTemplate = getCompiledTemplate;

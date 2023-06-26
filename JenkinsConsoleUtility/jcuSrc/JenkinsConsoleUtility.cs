@@ -55,7 +55,17 @@ namespace JenkinsConsoleUtility
                 {
                     returnCode = VerifyKeys(tempCommand, lcArgsByName);
                     if (returnCode == 0)
-                        returnCode = tempCommand.Execute(lcArgsByName, casedArgsByName);
+                    {
+                        try
+                        {
+                            returnCode = tempCommand.Execute(lcArgsByName, casedArgsByName);
+                        }
+                        catch (Exception e)
+                        {
+                            JcuUtil.FancyWriteToConsole(ConsoleColor.Red, key + " command threw exception: " + e.ToString());
+                            returnCode = 1;
+                        }
+                    }
                 }
                 if (returnCode != 0)
                 {
@@ -76,8 +86,11 @@ namespace JenkinsConsoleUtility
         /// <returns>The string associated with this key</returns>
         public static string GetArgVar(Dictionary<string, string> args, string key, string getDefault = null)
         {
-            if (TryGetArgVar(out string output, args, key, getDefault))
+            string output = "";
+            if (TryGetArgVar(out output, args, key, getDefault))
+            {
                 return output;
+            }
 
             if (getDefault != null) // Don't use string.IsNullOrEmpty() here, because there's a distinction between "undefined" and "empty"
             {

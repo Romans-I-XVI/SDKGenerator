@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -29,6 +30,8 @@ namespace PlayFab.Internal
 
             HttpResponseMessage httpResponse;
             string httpResponseString;
+            IEnumerable<string> requestId;
+            bool hasReqId = false;
             using (var postBody = new ByteArrayContent(Encoding.UTF8.GetBytes(bodyString)))
             {
                 postBody.Headers.Add("Content-Type", "application/json");
@@ -53,6 +56,7 @@ namespace PlayFab.Internal
                 {
                     httpResponse = await _client.PostAsync(fullUrl, postBody);
                     httpResponseString = await httpResponse.Content.ReadAsStringAsync();
+                    hasReqId = httpResponse.Headers.TryGetValues("X-RequestId", out requestId);
                 }
                 catch (HttpRequestException e)
                 {
@@ -76,10 +80,11 @@ namespace PlayFab.Internal
             {
                 var error = new PlayFabError();
 
-                if (string.IsNullOrEmpty(httpResponseString) || httpResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                if (string.IsNullOrEmpty(httpResponseString))
                 {
                     error.HttpCode = (int)httpResponse.StatusCode;
                     error.HttpStatus = httpResponse.StatusCode.ToString();
+                    error.RequestId = GetRequestId(hasReqId, requestId);
                     return error;
                 }
 
@@ -94,6 +99,7 @@ namespace PlayFab.Internal
                     error.HttpStatus = httpResponse.StatusCode.ToString();
                     error.Error = PlayFabErrorCode.JsonParseError;
                     error.ErrorMessage = e.Message;
+                    error.RequestId = GetRequestId(hasReqId, requestId); ;
                     return error;
                 }
 
@@ -101,6 +107,7 @@ namespace PlayFab.Internal
                 error.HttpStatus = errorResult.status;
                 error.Error = (PlayFabErrorCode)errorResult.errorCode;
                 error.ErrorMessage = errorResult.errorMessage;
+                error.RetryAfterSeconds = errorResult.retryAfterSeconds;
 
                 if (errorResult.errorDetails != null)
                 {
@@ -111,6 +118,8 @@ namespace PlayFab.Internal
                     }
                 }
 
+                error.RequestId = GetRequestId(hasReqId, requestId); ;
+
                 return error;
             }
 
@@ -119,11 +128,37 @@ namespace PlayFab.Internal
                 return new PlayFabError
                 {
                     Error = PlayFabErrorCode.Unknown,
-                    ErrorMessage = "Internal server error"
+                    ErrorMessage = "Internal server error",
+                    RequestId = GetRequestId(hasReqId, requestId)
                 };
             }
 
             return httpResponseString;
+        }
+
+        private string GetRequestId(bool hasReqId, IEnumerable<string> reqIdContainer)
+        {
+            const string defaultReqId = "NoRequestIdFound";
+
+            if (!hasReqId)
+            {
+                return defaultReqId;
+            }
+
+            try
+            {
+                string reqId = reqIdContainer.FirstOrDefault();
+                if (string.IsNullOrEmpty(reqId))
+                {
+                    reqId = defaultReqId;
+                }
+
+                return reqId;
+            }
+            catch (Exception e)
+            {
+                return "Failed to Enumerate RequestId. Exception message: " + e.Message;
+            }
         }
     }
 }

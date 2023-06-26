@@ -59,8 +59,8 @@ end
 function PlayFabApiTestSuite.InvalidLoginTest()
     local invalidRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/LoginWithEmailAddress
-        Email = "paul@playfab.com",
+        --   https://docs.microsoft.com/rest/api/playfab/client/authentication/loginwithemailaddress
+        Email = "a@b.com",
         Password = "INVALID"
     }
     PlayFabClientApi.LoginWithEmailAddress(invalidRequest, AsyncTestSuite.WrapCallback("OnInvalidSuccess", PlayFabApiTestSuite.OnInvalidSuccess), AsyncTestSuite.WrapCallback("InvalidLoginError", PlayFabApiTestSuite.InvalidLoginError))
@@ -81,7 +81,7 @@ end
 function PlayFabApiTestSuite.InvalidRegistrationTest()
     local invalidRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/RegisterPlayFabUser
+        --   https://docs.microsoft.com/rest/api/playfab/client/authentication/registerplayfabuser
         Username = "x",
         Email = "x",
         Password = "x"
@@ -113,7 +113,7 @@ end
 function PlayFabApiTestSuite.LoginOrRegisterTest()
     local loginRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/LoginWithCustomID
+        --   https://docs.microsoft.com/rest/api/playfab/client/authentication/loginwithcustomid
         CustomId = buildIdentifier,
         CreateAccount = true
     }
@@ -126,44 +126,6 @@ function PlayFabApiTestSuite.OnLoginSuccess(result)
     else
         AsyncTestSuite.EndTest("FAILED", "PlayFabId not found in login result" .. json.encode(result))
     end
-end
-
---- <summary>
---- CLIENT API
---- Test that the login call sequence sends the AdvertisingId when set
---- </summary>
-function PlayFabApiTestSuite.LoginWithAdvertisingId()
-    PlayFabSettings.settings.advertisingIdType = PlayFabSettings.settings.AD_TYPE_ANDROID_ID
-    PlayFabSettings.settings.advertisingIdValue = "PlayFabTestId"
-
-    local loginRequest = {
-        -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/LoginWithCustomID
-        CustomId = buildIdentifier,
-        CreateAccount = true
-    }
-    PlayFabClientApi.LoginWithCustomID(loginRequest, AsyncTestSuite.WrapCallback("OnAdvertLoginSuccess", PlayFabApiTestSuite.OnAdvertLoginSuccess), PlayFabApiTestSuite.OnSharedError)
-end
-function PlayFabApiTestSuite.OnAdvertLoginSuccess(result)
-    if (not result.PlayFabId) then 
-        AsyncTestSuite.EndTest("FAILED", "PlayFabId not found in login result" .. json.encode(result))
-        return
-    end
-
-    PlayFabApiTestSuite.playFabId = result.PlayFabId
-    -- Schedule a coroutine which will check for the IDFA result later
-    local co = coroutine.create(PlayFabApiTestSuite.WaitForIdfa)
-    AsyncTestSuite.ScheduleCoroutine("LoginWithAdvertisingId", co)
-end
-function PlayFabApiTestSuite.WaitForIdfa()
-    for i=1,100000 do
-        if (PlayFabSettings.settings.advertisingIdType == (PlayFabSettings.settings.AD_TYPE_ANDROID_ID .. "_Successful")) then
-            AsyncTestSuite.EndTest("PASSED", nil)
-            return
-        end
-        coroutine.yield()
-    end
-    AsyncTestSuite.EndTest("FAILED", "Submission of IDFA never succeeded" .. json.encode(PlayFabSettings.settings.advertisingIdType))
 end
 
 --- <summary>
@@ -186,7 +148,7 @@ function PlayFabApiTestSuite.OnGetUserData1(result)
 
     local updateRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/UpdateUserData
+        --   https://docs.microsoft.com/rest/api/playfab/admin/player-data-management/updateuserdata
         Data = {}
     }
     updateRequest.Data[PlayFabApiTestSuite.TEST_DATA_KEY] = tostring(PlayFabApiTestSuite.testNumber)
@@ -231,7 +193,7 @@ function PlayFabApiTestSuite.OnGetStat1(result)
 
     local updateRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/UpdateUserData
+        --   https://docs.microsoft.com/rest/api/playfab/admin/player-data-management/updateuserdata
         Statistics = {{ StatisticName = PlayFabApiTestSuite.TEST_STAT_NAME, Value = PlayFabApiTestSuite.testStatValue }}
     }
     PlayFabClientApi.UpdatePlayerStatistics(updateRequest, AsyncTestSuite.WrapCallback("OnUpdateStat", PlayFabApiTestSuite.OnUpdateStat), PlayFabApiTestSuite.OnSharedError)
@@ -277,7 +239,7 @@ end
 function PlayFabApiTestSuite.LeaderBoard()
     local clientRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/GetLeaderboard
+        --   https://docs.microsoft.com/rest/api/playfab/client/player-data-management/getleaderboard
         MaxResultsCount = 3,
         StatisticName = PlayFabApiTestSuite.TEST_STAT_NAME
     }
@@ -314,7 +276,7 @@ end
 function PlayFabApiTestSuite.CloudScript()
     local helloWorldRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/ExecuteCloudScript
+        --   https://docs.microsoft.com/rest/api/playfab/client/server-side-cloud-script/executecloudscript
         FunctionName = "helloWorld"
     }
     PlayFabClientApi.ExecuteCloudScript(helloWorldRequest, AsyncTestSuite.WrapCallback("OnHelloWorld", PlayFabApiTestSuite.OnHelloWorld), PlayFabApiTestSuite.OnSharedError)
@@ -334,7 +296,7 @@ end
 function PlayFabApiTestSuite.CloudScriptError()
     local errRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/ExecuteCloudScript
+        --   https://docs.microsoft.com/rest/api/playfab/client/server-side-cloud-script/executecloudscript
         FunctionName = "throwError"
     }
     PlayFabClientApi.ExecuteCloudScript(errRequest, AsyncTestSuite.WrapCallback("OnCloudScriptError", PlayFabApiTestSuite.OnCloudScriptError), PlayFabApiTestSuite.OnSharedError)
@@ -358,7 +320,7 @@ end
 function PlayFabApiTestSuite.WriteEvent()
     local writeEventRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/WritePlayerEvent
+        --   https://docs.microsoft.com/rest/api/playfab/client/analytics/writeplayerevent
         EventName = "ForumPostEvent",
         Body = {
             Subject = "My First Post",
@@ -378,7 +340,7 @@ end
 function PlayFabApiTestSuite.GetEntityToken()
     local getTokenRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Authentication/method/GetEntityToken
+        --   https://docs.microsoft.com/rest/api/playfab/authentication/authentication/getentitytoken
     }
     PlayFabAuthenticationApi.GetEntityToken(getTokenRequest, AsyncTestSuite.WrapCallback("OnGetEntityToken", PlayFabApiTestSuite.OnGetEntityToken), PlayFabApiTestSuite.OnSharedError)
 end
@@ -401,7 +363,7 @@ end
 function PlayFabApiTestSuite.ObjectApi()
     local getObjRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Data/method/GetObjects
+        --   https://docs.microsoft.com/rest/api/playfab/data/object/getobjects
         Entity = {
             Id = PlayFabApiTestSuite.entityId,
             Type = PlayFabApiTestSuite.entityType,
@@ -419,7 +381,7 @@ function PlayFabApiTestSuite.OnGetObj1(result)
 
     local updateRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Data/method/SetObjects
+        --   https://docs.microsoft.com/rest/api/playfab/data/object/setobjects
         Entity = {
             Id = PlayFabApiTestSuite.entityId,
             Type = PlayFabApiTestSuite.entityType,
@@ -436,7 +398,7 @@ end
 function PlayFabApiTestSuite.OnSetObj(result)
     local getObjRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Data/method/GetObjects
+        --   https://docs.microsoft.com/rest/api/playfab/data/object/getobjects
         Entity = {
             Id = PlayFabApiTestSuite.entityId,
             Type = PlayFabApiTestSuite.entityType,
@@ -464,7 +426,6 @@ function PlayFabApiTestSuite.Start()
     AsyncTestSuite.AddTest("InvalidLoginTest", PlayFabApiTestSuite.InvalidLoginTest)
     AsyncTestSuite.AddTest("InvalidRegistrationTest", PlayFabApiTestSuite.InvalidRegistrationTest)
     AsyncTestSuite.AddTest("LoginOrRegisterTest", PlayFabApiTestSuite.LoginOrRegisterTest)
-    AsyncTestSuite.AddTest("LoginWithAdvertisingId", PlayFabApiTestSuite.LoginWithAdvertisingId)
     AsyncTestSuite.AddTest("UserDataApi", PlayFabApiTestSuite.UserDataApi)
     AsyncTestSuite.AddTest("PlayerStatisticsApi", PlayFabApiTestSuite.PlayerStatisticsApi)
     AsyncTestSuite.AddTest("UserCharacter", PlayFabApiTestSuite.UserCharacter)
@@ -489,7 +450,7 @@ function PlayFabApiTestSuite.SendJenkernaughtReport(OnSaveSuccess, OnSaveFail)
 
     local saveResultsRequest = {
         -- Currently, you need to look up the correct format for this object in the API-docs:
-        --   https://api.playfab.com/Documentation/Client/method/ExecuteCloudScript
+        --   https://docs.microsoft.com/rest/api/playfab/client/server-side-cloud-script/executecloudscript
         FunctionName = "SaveTestData",
         FunctionParameter = {
             customId = buildIdentifier,
