@@ -1,6 +1,6 @@
 -- PlayFab <%- api.name %> API
 -- This is the main file you should require in your game
--- All api calls are documented here: https://api.playfab.com/Documentation/<%- api.name %>
+-- All api calls are documented here: https://docs.microsoft.com/gaming/playfab/api-references/
 -- Example code:
 -- local PlayFab<%- api.name %>Api = require("<%- requirePrefix %>PlayFab<%- api.name %>Api")
 -- PlayFab<%- api.name %>Api.<<%- api.name %>ApiCall>(request, successCallbackFunc, errorCallbackFunc)
@@ -14,20 +14,6 @@ local PlayFab<%- api.name %>Api = {
 <% if (hasClientOptions) { %>
 function PlayFabClientApi.IsClientLoggedIn()
     return (not (PlayFabSettings._internalSettings.sessionTicket == nil))
-end
-
-function PlayFabClientApi._MultiStepClientLogin(needsAttribution)
-    if (needsAttribution and not PlayFabSettings.settings.disableAdvertising and PlayFabSettings.settings.advertisingIdType and PlayFabSettings.settings.advertisingIdValue) then
-        local request = {}
-        if (PlayFabSettings.settings.advertisingIdType == PlayFabSettings.settings.AD_TYPE_IDFA) then
-            request.Idfa = PlayFabSettings.settings.advertisingIdValue
-        elseif (PlayFabSettings.settings.advertisingIdType == PlayFabSettings.settings.AD_TYPE_ANDROID_ID) then
-            request.Adid = PlayFabSettings.settings.advertisingIdValue
-        else
-            return
-        end
-        PlayFabClientApi.AttributeInstall(request, nil, nil)
-    end
 end
 <% }
 for (var c in api.calls) { var apiCall = api.calls[c]; %>

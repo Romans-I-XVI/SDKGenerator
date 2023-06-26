@@ -15,9 +15,9 @@ namespace JenkinsConsoleUtility.Commands
         private string _apiSpecPath, _apiSpecGitUrl, _apiSpecPfUrl; // Exactly one of these is expected to be set
 
         private static readonly string[] MyCommandKeys = { "versionVarWriter", "version" };
-        public string[] CommandKeys => MyCommandKeys;
+        public string[] CommandKeys { get { return MyCommandKeys; } }
         private static readonly string[] MyMandatoryArgKeys = { "sdkName" };
-        public string[] MandatoryArgKeys => MyMandatoryArgKeys;
+        public string[] MandatoryArgKeys { get { return MyMandatoryArgKeys; } }
 
         // If this command runs, make the results accessible to other modules
         public static string sdkVersionString;
@@ -28,9 +28,11 @@ namespace JenkinsConsoleUtility.Commands
 
         public int Execute(Dictionary<string, string> argsLc, Dictionary<string, string> argsCased)
         {
-            string destFile, workspacePath;
+            string destFile, workspacePath, varsWithSpaces;
             JenkinsConsoleUtility.TryGetArgVar(out destFile, argsLc, "destFile");
             JenkinsConsoleUtility.TryGetArgVar(out workspacePath, argsLc, "workspacePath");
+            // Jenkins wants a file with spaces around the "=", but Bash wants a file without. This controls which format nuance to use
+            JenkinsConsoleUtility.TryGetArgVar(out varsWithSpaces, argsLc, "varsWithSpaces");
             var sdkName = JenkinsConsoleUtility.GetArgVar(argsLc, "sdkName");
             var sdkGenKey = GetSdkGenKey(sdkName);
 
@@ -48,7 +50,8 @@ namespace JenkinsConsoleUtility.Commands
 
             var versionJson = GetApiJson("SdkManualNotes.json");
             var sdkNotes = JsonWrapper.DeserializeObject<SdkManualNotes>(versionJson);
-            if (!sdkNotes.sdkVersion.TryGetValue(sdkGenKey, out sdkVersionString))
+            var cppFilteredSdk = sdkGenKey.StartsWith("xplatcppsdk") ? "xplatcppsdk" : sdkGenKey;
+            if (!sdkNotes.sdkVersion.TryGetValue(cppFilteredSdk, out sdkVersionString))
             {
                 JcuUtil.FancyWriteToConsole("SdkManualNotes.json does not contain: " + sdkGenKey);
                 JcuUtil.FancyWriteToConsole("SdkManualNotes.json:\n" + versionJson);
@@ -60,16 +63,23 @@ namespace JenkinsConsoleUtility.Commands
             set = true;
 
             // Write this to a Jenkins environment variable file, if defined
+            var space = " ";
+            if (!string.IsNullOrEmpty(varsWithSpaces) && varsWithSpaces.ToLower() == "false")
+                space = "";
             if (!string.IsNullOrEmpty(destFile))
             {
                 using (var outputFile = new StreamWriter(Path.Combine(workspacePath, destFile)))
                 {
-                    outputFile.WriteLine("sdkVersion = " + sdkVersionString);
-                    outputFile.WriteLine("sdkDate = " + date);
-                    JcuUtil.FancyWriteToConsole("sdkVersion = " + sdkVersionString);
-                    JcuUtil.FancyWriteToConsole("sdkDate = " + date);
+                    outputFile.WriteLine("sdkVersion" + space + "=" + space + sdkVersionString);
+                    outputFile.WriteLine("sdkDate" + space + "=" + space + date);
                 }
             }
+            else
+            {
+                JcuUtil.FancyWriteToConsole(System.ConsoleColor.Yellow, "WARNING: Output file not defined.");
+            }
+            JcuUtil.FancyWriteToConsole("sdkVersion" + space + "=" + space + sdkVersionString);
+            JcuUtil.FancyWriteToConsole("sdkDate" + space + "=" + space + date);
             return 0;
         }
 
@@ -119,17 +129,14 @@ namespace JenkinsConsoleUtility.Commands
                 case "cocos2d-xsdk": return "cpp-cocos2dx";
                 case "javascriptsdk": case "javascriptbetasdk": return "javascript";
                 case "objective_c_sdk": return "objc";
-                case "playfabgameserver": return "csharp-unity-gameserver";
                 // Multiple repos map to the same folder
+                case "xplatcppazuresdk": case "csharpazuresdk": case "unityazuresdk": return "azure";
                 case "csharpsdk": case "csharpbetasdk": case "csharppsnsdk": return "csharp";
                 case "nodesdk": case "nodebetasdk": return "js-node";
                 case "postmancollection": case "postmanbeta": return "postman";
                 case "unitysdk": case "unitypsn": case "unitybeta": case "unityeditorextensions": return "unity-v2";
-                case "unrealblueprintsdk": case "uebpbetasdk": case "uebppsnsdk": return "cpp-unreal";
-                case "unrealcppsdk": case "uecppbetasdk": case "uecpppsnsdk": return "cpp-ue4";
                 case "unrealmarketplaceplugin": case "uemkplbetasdk": case "uemkplpsnsdk": return "unrealmarketplaceplugin";
-                case "windowssdk": case "winbetasdk": case "winpsnsdk": return "windowssdk";
-                case "xplatcppsdk": case "xplatbetasdk": case "xplatpsnsdk": return "xplatcppsdk";
+                case "xplatcppsdk": case "xplatbetasdk": case "xplatcppsdk-private-switch": case "xplatcppsdk-private-ps4": case "xplatcppsdk-private-gdk": return "xplatcppsdk";
                 case "javasdk": case "javabetasdk": return "java";
                 case "pythonsdk": case "pythonbetasdk": return "pythonsdk";
 

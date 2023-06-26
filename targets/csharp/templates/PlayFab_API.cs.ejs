@@ -1,7 +1,12 @@
-#if <%- getApiDefineFlag(api) %>
+#if <%- getApiDefineFlag(api) %> && !DISABLE_PLAYFAB_STATIC_API
 
 using PlayFab.<%- api.name %>Models;
 using PlayFab.Internal;
+#pragma warning disable 0649
+using System;
+// This is required for the Obsolete Attribute flag
+//  which is not always present in all API's
+#pragma warning restore 0649
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -60,22 +65,6 @@ namespace PlayFab
 <%- getResultActions("            ", apiCall, api, false) %>
             return new PlayFabResult<<%- apiCall.result %>> { Result = result, CustomData = customData };
         }
-<% } %><% if (hasClientOptions) { %>
-        private static async Task<PlayFabResult<AttributeInstallResult>> MultiStepClientLogin(bool needsAttribution)
-        {
-            if (needsAttribution && !PlayFabSettings.staticSettings.DisableAdvertising && !string.IsNullOrEmpty(PlayFabSettings.staticSettings.AdvertisingIdType) && !string.IsNullOrEmpty(PlayFabSettings.staticSettings.AdvertisingIdValue))
-            {
-                var request = new AttributeInstallRequest();
-                if (PlayFabSettings.staticSettings.AdvertisingIdType == PlayFabSettings.AD_TYPE_IDFA)
-                    request.Idfa = PlayFabSettings.staticSettings.AdvertisingIdValue;
-                else if (PlayFabSettings.staticSettings.AdvertisingIdType == PlayFabSettings.AD_TYPE_ANDROID_ID)
-                    request.Adid = PlayFabSettings.staticSettings.AdvertisingIdValue;
-                else
-                    return null;
-                return await AttributeInstallAsync(request);
-            }
-            return null;
-        }
-<% } %>    }
+<% } %>}
 }
 #endif

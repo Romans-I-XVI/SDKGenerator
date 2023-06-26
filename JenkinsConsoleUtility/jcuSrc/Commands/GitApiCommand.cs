@@ -16,9 +16,9 @@ namespace JenkinsConsoleUtility.Commands
         //private readonly Type[] _commandDependency = { typeof(VersionVarWriter) };
         //public Type[] CommandDependency => _commandDependency;
         private readonly string[] _commandKeys = { "GitApi" };
-        public string[] CommandKeys => _commandKeys;
+        public string[] CommandKeys { get { return _commandKeys; } }
         private readonly string[] _mandatoryArgKeys = { "sdkName", "GITHUB_CREDENTIALS_FILE" };
-        public string[] MandatoryArgKeys => _mandatoryArgKeys;
+        public string[] MandatoryArgKeys { get { return _mandatoryArgKeys; } }
 
         public int Execute(Dictionary<string, string> argsLc, Dictionary<string, string> argsCased)
         {
@@ -86,7 +86,7 @@ namespace JenkinsConsoleUtility.Commands
         {
             private const string TagFormat = "{major}.{minor}.{date}";
             private const string NameFormat = "{sdkName} version {major}.{minor}";
-            private const string BodyFormat = "https://api.playfab.com/releaseNotes/#{date}";
+            private const string BodyFormat = "https://learn.microsoft.com/gaming/playfab/release-notes/#{date}";
 
             public GitHubReleaseRequest(string sdkName, string major, string minor, string date) : base(TagFormat.Replace("{major}", major).Replace("{minor}", minor).Replace("{date}", date))
             {

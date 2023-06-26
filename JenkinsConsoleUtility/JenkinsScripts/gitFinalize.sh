@@ -1,7 +1,7 @@
 #!/bin/bash
 
-. "$WORKSPACE/SDKGenerator/JenkinsConsoleUtility/JenkinsScripts/util.sh" 2> /dev/null || . ./util.sh 2> /dev/null
-. "$WORKSPACE/SDKGenerator/JenkinsConsoleUtility/JenkinsScripts/sdkUtil.sh" 2> /dev/null || . ./sdkUtil.sh 2> /dev/null
+. "$WORKSPACE/SdkGenerator/SetupScripts/util.sh" 2> /dev/null
+. "$WORKSPACE/SdkGenerator/SetupScripts/sdkUtil.sh" 2> /dev/null
 
 CheckDefault PublishToS3 false
 
@@ -20,12 +20,12 @@ DoPublishToS3() {
     pushd "sdks/$SdkName"
     git clean -dfx
     popd
-    
+
     rm -f repo.zip || true
     7z a -r repo.zip "sdks/$SdkName"
 
-    CheckDefault VerticalName master
-    aws s3 cp repo.zip s3://playfab-sdk-dist/$VerticalName/$SdkName/$(date +%y%m%d)_${S3BuildNum}_$SdkName.zip --profile jenkins
+    CheckDefault ClusterName master
+    aws s3 cp repo.zip s3://playfab-sdk-dist/$ClusterName/$SdkName/$(date +%y%m%d)_${S3BuildNum}_$SdkName.zip --profile jenkins
 }
 
 CheckVerticalizedParameters

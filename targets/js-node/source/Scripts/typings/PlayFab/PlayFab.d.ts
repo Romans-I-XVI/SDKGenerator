@@ -10,13 +10,8 @@ declare module PlayFabModule {
         titleId: string;
         developerSecretKey?: string;
         port?: number;
-        advertisingIdType?: string;
-        advertisingIdValue?: string;
-        disableAdvertising?: boolean;
-        AD_TYPE_IDFA: string;
-        AD_TYPE_ANDROID_ID: string;
     }
-    export interface IPlayFabRequestCommon { }
+    export interface IPlayFabRequestCommon {}
     export interface IPlayFabError {
         code: number;
         status: string;
@@ -24,11 +19,14 @@ declare module PlayFabModule {
         errorCode: number;
         errorMessage: string;
         errorDetails?: { [key: string]: string[] };
+        retryAfterSeconds?: number;
     }
     export interface IPlayFabSuccessContainer<TResult extends IPlayFabResultCommon> extends IPlayFabError {
         data: TResult;
     }
-    export interface IPlayFabResultCommon extends IPlayFabError { }
+    export interface IPlayFabResultCommon extends IPlayFabError {}
 
-    export interface ApiCallback<TResult extends IPlayFabResultCommon> { (error: IPlayFabError, result: IPlayFabSuccessContainer<TResult>): void }
+    export interface ApiCallback<TResult extends IPlayFabResultCommon> {
+        (error: IPlayFabError, result: IPlayFabSuccessContainer<TResult>): void;
+    }
 }
