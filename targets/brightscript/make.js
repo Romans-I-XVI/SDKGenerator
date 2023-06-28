@@ -28,7 +28,6 @@ function makePlayFab(apis, sourceDir, apiOutputDir) {
 function makeApi(api, sourceDir, apiOutputDir) {
     var locals = {
         api: api,
-        sourceDir: sourceDir,
         getAuthParams: getAuthParams,
         getRequestActions: getRequestActions,
         getResultActions: getResultActions,
