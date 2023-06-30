@@ -55,13 +55,9 @@ function getDeprecationAttribute(tabbing, apiObj) {
     var isDeprecated = apiObj.hasOwnProperty("deprecation");
 
     if (isDeprecated && apiObj.deprecation.ReplacedBy != null)
-        return tabbing + "/**\n"
-            + tabbing + " * @deprecated Please use " + apiObj.deprecation.ReplacedBy + " instead. \n"
-            + tabbing + " */\n";
+        return tabbing + "' !!! Deprecated !!! - Please use " + apiObj.deprecation.ReplacedBy + " instead.\n    ";
     if (isDeprecated)
-        return tabbing + "/**\n"
-            + tabbing + " * @deprecated Do not use\n"
-            + tabbing + " */\n";
+        return tabbing + "' !!! Deprecated !!! - Do not use\n    ";
     return "";
 }
 
@@ -71,7 +67,6 @@ function generateApiSummary(tabbing, apiElement, summaryParam, extraLines) {
     var output = "";
     if (lines.length > 0) {
         for (let i = 0; i < lines.length; i++) {
-            const element = lines[i];
             output += tabbing + "' " + lines[i] + "\n";
         }
     }
