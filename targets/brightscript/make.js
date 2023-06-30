@@ -22,7 +22,7 @@ function makePlayFab(apis, sourceDir, apiOutputDir) {
     };
 
     var apiTemplate = getCompiledTemplate(path.resolve(sourceDir, "templates/PlayFab.brs.ejs"));
-    writeFile(path.resolve(apiOutputDir, "PlayFab.brs"), apiTemplate(locals));
+    writeFile(path.resolve(apiOutputDir, "PlayFabSDK/PlayFab.brs"), apiTemplate(locals));
 }
 
 function makeApi(api, sourceDir, apiOutputDir) {
@@ -36,7 +36,7 @@ function makeApi(api, sourceDir, apiOutputDir) {
     };
 
     var apiTemplate = getCompiledTemplate(path.resolve(sourceDir, "templates/API.brs.ejs"));
-    writeFile(path.resolve(apiOutputDir, "PlayFab" + api.name + "SDK.brs"), apiTemplate(locals));
+    writeFile(path.resolve(apiOutputDir, "PlayFabSDK/PlayFab" + api.name + "SDK.brs"), apiTemplate(locals));
 }
 
 function getAuthParams(apiCall) {
