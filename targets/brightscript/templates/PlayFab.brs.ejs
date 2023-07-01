@@ -4,6 +4,7 @@ function PlayFab() as object
 			Settings: {
 				TitleID: invalid,
 				AsyncEnabled: false,
+				DebuggingEnabled: false,
 				Timeout: 20000,
 				DeveloperSecretKey: invalid
 			}
@@ -34,6 +35,10 @@ function PlayFab() as object
 			play_fab = PlayFab()
 			url = play_fab._internalSettings.GetServerURL(url_path)
 			json = FormatJSON(request)
+
+			if PlayFab().Settings.DebuggingEnabled
+				print "::PlayFab:: Sending Request " + url_path + " " + json
+			end if
 
 			message_port = CreateObject("roMessagePort")
 			transfer = CreateObject("roUrlTransfer")
