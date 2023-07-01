@@ -1,9 +1,13 @@
-function PlayFab<%- api.name %>SDK() as object
-    api = {}
+function PlayFab<%- api.name %>Api() as object
+    if m.PlayFab<%- api.name %>Api <> invalid
+        return m.PlayFab<%- api.name %>Api
+    end if
+
+    m.PlayFab<%- api.name %>Api = {}
 
     <% for(var i in api.calls) { var apiCall = api.calls[i];
         %><%- getDeprecationAttribute("", apiCall)
-        %>api.<%- apiCall.name %> = function(request = {}, extra_headers = invalid) as object
+        %>m.PlayFab<%- api.name %>Api.<%- apiCall.name %> = function(request = {}, extra_headers = invalid) as object
 <%- generateApiSummary("        ", apiCall, "summary", "https://docs.microsoft.com/rest/api/playfab/" + api.name.toLowerCase() + "/" + apiCall.subgroup.toLowerCase().replaceAll(" ","-") + "/" + apiCall.name.toLowerCase())
 %><%- getRequestActions("        ", apiCall) 
 %>
@@ -12,6 +16,5 @@ function PlayFab<%- api.name %>SDK() as object
     end function
 
     <% }
-    %>return api
-
+    %>return m.PlayFab<%- api.name %>Api
 end function

@@ -21,9 +21,7 @@ function PlayFab() as object
 				ErrorEntityToken: "You must successfully call GetEntityToken before calling this",
 				ErrorSecretKey: "Must have PlayFab.Settings.DeveloperSecretKey set to call this method"
 			}
-			<% for(var i in apis) { var apiName = apis[i].name;
-			%><%- apiName %>Api: PlayFab<%- apiName %>SDK(),
-			<% } %>Post: invalid,
+			Post: invalid,
 			Wait: invalid
 		}
 
@@ -97,10 +95,3 @@ function PlayFab() as object
 
 	return m.PlayFab
 end function
-
-<% for(var i in apis) { var apiName = apis[i].name;
-%>function PlayFab<%- apiName %>Api() as object
-	return PlayFab().<%- apiName %>Api
-end function
-
-<% } %>
