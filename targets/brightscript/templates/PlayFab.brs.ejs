@@ -35,7 +35,7 @@ function PlayFab() as object
 			json = FormatJSON(request)
 
 			if PlayFab().Settings.DebuggingEnabled
-				print "::PlayFab:: Sending Request " + url_path + " " + json
+				print "::PlayFab:: Request - " + url_path + " " + json
 			end if
 
 			message_port = CreateObject("roMessagePort")
@@ -85,9 +85,17 @@ function PlayFab() as object
 				if message <> invalid
 					post.Result = message
 					waiting = false
+
+					if PlayFab().Settings.DebuggingEnabled
+						print "::PlayFab:: Result - " + post.Transfer.GetUrl().Replace("https://" + PlayFab().Settings.TitleID + ".playfabapi.com", "") + " " + post.Result
+					end if
 				end if
 				if timer.TotalMilliseconds() > timeout
 					waiting = false
+
+					if PlayFab().Settings.DebuggingEnabled
+						print "::PlayFab:: Timed Out - " + post.Transfer.GetUrl().Replace("https://" + PlayFab().Settings.TitleID + ".playfabapi.com", "")
+					end if
 				end if
 			end while
 		end function

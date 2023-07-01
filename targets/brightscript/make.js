@@ -94,7 +94,7 @@ function getRequestActions(tabbing, apiCall) {
             + tabbing + "    request.TitleID = PlayFab().Settings.TitleID\n"
             + tabbing + "end if\n"
             + tabbing + "if request.TitleID = invalid\n"
-            + tabbing + "    print PlayFab()._internalSettings.ErrorTitleID\n"
+            + tabbing + "    print \"::PlayFab:: Error - \" +  PlayFab()._internalSettings.ErrorTitleID\n"
             + tabbing + "    stop\n"
             + tabbing + "end if\n"
     return "";
