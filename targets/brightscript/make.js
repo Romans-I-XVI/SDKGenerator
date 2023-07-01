@@ -5,9 +5,9 @@ if (typeof (templatizeTree) === "undefined") templatizeTree = function () { };
 if (typeof (generateApiSummaryLines) === "undefined") generateApiSummaryLines = function () { };
 if (typeof (getCompiledTemplate) === "undefined") getCompiledTemplate = function () { };
 
-exports.makeCombinedAPI = function (apis, sourceDir, apiOutputDir) {
-    // Builds every api.  The provided "apis" variable is a list of objects, Examples: API_SPECS/Legacy/PlayFab/admin.api.json, API_SPECS/Legacy/PlayFab/server.api.json, and API_SPECS/Legacy/PlayFab/client.api.json
-    
+exports.makeClientAPI2 = function (apis, sourceDir, apiOutputDir) {
+    // Builds the client api.  The provided "api" variable is a single object, the API_SPECS/client.api.json as an object
+
     console.log("Generating Client api from: " + sourceDir + " to: " + apiOutputDir);
     makePlayFab(apis, sourceDir,apiOutputDir)
     for (var i = 0; i < apis.length; i++) {
