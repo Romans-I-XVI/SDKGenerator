@@ -27,14 +27,10 @@ function PlayFab() as object
 		}
 
 		m.PlayFab._internalSettings.GetServerURL = function(methodUrl as string) as string
-			if PlayFab().Settings.TitleID = invalid
-				print "TitleID must be set before making API calls"
-			end if
-
 			return "https://" + PlayFab().Settings.TitleID + ".playfabapi.com" + methodUrl
 		end function
 
-		m.PlayFab.Post = function(url_path, request, auth_key = invalid, auth_val = invalid, custom_data = invalid, extra_headers = invalid) as dynamic
+		m.PlayFab.Post = function(url_path, request, auth_key = invalid, auth_val = invalid, extra_headers = invalid) as dynamic
 			play_fab = PlayFab()
 			url = play_fab._internalSettings.GetServerURL(url_path)
 			json = FormatJSON(request)

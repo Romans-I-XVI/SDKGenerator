@@ -3,11 +3,11 @@ function PlayFab<%- api.name %>SDK() as object
 
     <% for(var i in api.calls) { var apiCall = api.calls[i];
         %><%- getDeprecationAttribute("", apiCall)
-        %>api.<%- apiCall.name %> = function(request = {}, custom_data = invalid, extra_headers = invalid) as object
+        %>api.<%- apiCall.name %> = function(request = {}, extra_headers = invalid) as object
 <%- generateApiSummary("        ", apiCall, "summary", "https://docs.microsoft.com/rest/api/playfab/" + api.name.toLowerCase() + "/" + apiCall.subgroup.toLowerCase().replaceAll(" ","-") + "/" + apiCall.name.toLowerCase())
 %><%- getRequestActions("        ", apiCall) 
 %>
-        post = PlayFab().Post("<%- apiCall.url %>", request, <%- getAuthParams(apiCall) %>, custom_data, extra_headers)<%- getResultActions("        ", apiCall, api) %>
+        post = PlayFab().Post("<%- apiCall.url %>", request, <%- getAuthParams(apiCall) %>, extra_headers)<%- getResultActions("        ", apiCall, api) %>
         return post
     end function
 
