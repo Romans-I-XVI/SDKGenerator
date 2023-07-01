@@ -108,14 +108,15 @@ function getResultActions(tabbing, apiCall) {
             + tabbing + "end if\n"
             + tabbing + "if post.Result <> invalid\n"
             + tabbing + "    result = ParseJson(post.Result)\n"
+            + tabbing + "    if result.data = invalid\n"
+            + tabbing + "        result.data = {}\n"
+            + tabbing + "    end if\n"
             + tabbing + "    if result.data.PlayFabID <> invalid\n"
             + tabbing + "        PlayFab()._internalSettings.PlayFabID = result.data.PlayFabID\n"
             + tabbing + "    end if\n"
-
             + tabbing + "    if result.data.SessionTicket <> invalid\n"
             + tabbing + "        PlayFab()._internalSettings.SessionTicket = result.data.SessionTicket\n"
             + tabbing + "    end if\n"
-
             + tabbing + "    if result.data.EntityToken <> invalid\n"
             + tabbing + "        PlayFab()._internalSettings.EntityId = result.data.EntityToken.Entity.Id\n"
             + tabbing + "        PlayFab()._internalSettings.EntityType = result.data.EntityToken.Entity.Type\n"
@@ -129,18 +130,27 @@ function getResultActions(tabbing, apiCall) {
             + tabbing + "end if\n"
             + tabbing + "if post.Result <> invalid\n"
             + tabbing + "    result = ParseJson(post.Result)\n"
+            + tabbing + "    if result.data = invalid\n"
+            + tabbing + "        result.data = {}\n"
+            + tabbing + "    end if\n"
             + tabbing + "    if result.data.EntityToken <> invalid\n"
             + tabbing + "        PlayFab()._internalSettings.EntityToken = result.data.EntityToken\n"
             + tabbing + "    end if\n"
             + tabbing + "end if\n"
-    // if (apiCall.result === "RegisterPlayFabUserResult")
-    //     return tabbing + "if (result != null && result.data.SessionTicket != null) {\n"
-    //         + tabbing + "    PlayFab._internalSettings.sessionTicket = result.data.SessionTicket;\n"
-    //         + tabbing + "    PlayFab.ClientApi._MultiStepClientLogin(result.data.SettingsForUser.NeedsAttribution);\n"
-    //         + tabbing + "}";
-    // if (apiCall.url === "/Client/AttributeInstall")
-    //     return tabbing + "// Modify advertisingIdType:  Prevents us from sending the id multiple times, and allows automated tests to determine id was sent successfully\n"
-    //         + tabbing + "PlayFab.settings.advertisingIdType += \"_Successful\";\n";
+    if (apiCall.result === "RegisterPlayFabUserResult")
+        return "\n\n"
+            + tabbing + "if post.IsAsync and post.SentSuccessfully\n"
+            + tabbing + "    PlayFab().Wait(post)\n"
+            + tabbing + "end if\n"
+            + tabbing + "if post.Result <> invalid\n"
+            + tabbing + "    result = ParseJson(post.Result)\n"
+            + tabbing + "    if result.data = invalid\n"
+            + tabbing + "        result.data = {}\n"
+            + tabbing + "    end if\n"
+            + tabbing + "    if result.data.SessionTicket <> invalid\n"
+            + tabbing + "        PlayFab()._internalSettings.SessionTicket = result.data.SessionTicket\n"
+            + tabbing + "    end if\n"
+            + tabbing + "end if\n"
 
     return "";
 }
