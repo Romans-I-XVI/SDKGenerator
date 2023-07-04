@@ -29,18 +29,22 @@ function PlayFab() as object
 			return "https://" + PlayFab().Settings.TitleID + ".playfabapi.com" + methodUrl
 		end function
 
+		m.PlayFab._internalSettings.CreateUrlTransfer = function() as object
+			message_port = CreateObject("roMessagePort")
+			transfer = CreateObject("roUrlTransfer")
+			transfer.SetMessagePort(message_port)
+			return transfer
+		end function
+
 		m.PlayFab.Post = function(url_path, request, auth_key = invalid, auth_val = invalid, extra_headers = invalid) as dynamic
-			play_fab = PlayFab()
-			url = play_fab._internalSettings.GetServerURL(url_path)
+			url = PlayFab()._internalSettings.GetServerURL(url_path)
 			json = FormatJSON(request)
 
 			if PlayFab().Settings.DebuggingEnabled
 				print "::PlayFab:: Request - " + url_path + " " + json
 			end if
 
-			message_port = CreateObject("roMessagePort")
-			transfer = CreateObject("roUrlTransfer")
-			transfer.SetMessagePort(message_port)
+			transfer = PlayFab()._internalSettings.CreateUrlTransfer()
 			transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
 			transfer.InitClientCertificates()
 			transfer.SetUrl(url)
@@ -64,7 +68,7 @@ function PlayFab() as object
 			post = {
 				Transfer: transfer,
 				Result: invalid,
-				IsAsync: play_fab.Settings.AsyncEnabled,
+				IsAsync: PlayFab().Settings.AsyncEnabled,
 				SentSuccessfully: sent_successfully
 			}
 
